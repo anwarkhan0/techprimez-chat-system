@@ -2,7 +2,7 @@
 
 # dependencies
 /node_modules
-/backend-chit-chat/node_modules
+/backend/node_modules
 /.pnp
 .pnp.js
 
