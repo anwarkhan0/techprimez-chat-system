@@ -1,11 +1,13 @@
 // backend/server.js
-require ('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const Message = require('./models/Message'); // Import the Message model
+const axios = require('axios');
+const { emit } = require('process');
 
 const app = express();
 
@@ -46,12 +48,28 @@ socket.on('connection', (clientSocket) => {
 
     // Log the message to check the structure before saving
     console.log('New message:', newMessage);
-
+    // Broadcast the user's message to all clients
+    socket.emit('chat message', { username: msg.username, message: msg.message });
     // Save the message to MongoDB
     newMessage.save()
-      .then(() => {
+      .then(async () => {
         console.log('Message saved successfully');
-        socket.emit('chat message', msg);  // Broadcast the message to all clients
+        try {
+          // Send message to the local AI server for response
+          const aiResponse = await axios.post('http://localhost:5000/chat', {
+            message: msg.message
+          });
+
+          // Get AI response
+          const responseMessage = aiResponse.data.response || 'Sorry, I couldn’t understand that.';
+
+          console.log('AI Response:', responseMessage);
+
+          // Broadcast the AI's response to all clients
+          socket.emit('chat message', { username: "AI-agent", message: responseMessage });
+        } catch (err) {
+          console.log('Error getting AI response:', err.message);
+        }
       })
       .catch(err => {
         console.log('Error saving message:', err.message);
